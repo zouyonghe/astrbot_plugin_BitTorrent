@@ -1,9 +1,38 @@
-# helloworld
+# AstrBot 磁力搜索插件
+适配磁力狗的磁力链接搜索插件，支持更新站点地址、返回结果数等配置，纯静态HTTP请求实现。
 
-AstrBot 插件模板
+## 核心特性
+1. 突破磁力狗重定向反爬：关闭自动重定向，提取原始搜索结果
+2. 配置完全自定义：支持修改站点地址、接口路径、超时时间等
+3. 自动解密：复刻站点window.atob+unescape加密逻辑
+4. 轻量无依赖：仅需基础HTTP/解析库，无需Playwright/Selenium
 
-A template plugin for AstrBot plugin feature
+## 环境要求
+- Python 3.8+
+- AstrBot 插件运行环境
+- 网络可访问目标磁力狗站点
 
-# 支持
+## 部署方法
+直接到插件商店安装即可，也可下载zip文件手动安装
 
-[帮助文档](https://astrbot.app)
+## 配置文件修改
+在 AstrBot 插件配置即可更改
+
+## 配置项说明
+配置项	说明	默认值
+base_url	磁力狗站点基础地址，支持更换备用域名（如站点失效时）	https://clg2.clgapp1.xyz
+search_path	搜索接口路径，正常无需更改	/cllj.php
+max_results	单次搜索返回的最大结果数，建议 3-5 条（过多会增加解密耗时）	3
+request_timeout	HTTP 请求超时时间（秒），详情页解密需耗时，建议 15-20 秒	15
+
+## 使用方法
+发送指令：
+bt [搜索关键词]
+示例：
+bt 安达与岛村
+
+## 说明
+当原站点失效时，请访问 https://ciligoufabuye3.xyz 或发邮件至 clgdzzh@gmail.com 更新地址
+
+## 许可证
+本插件遵循和AstrBot相同的许可证

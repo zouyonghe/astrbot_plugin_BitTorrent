@@ -1,0 +1,33 @@
+{
+  "magnet_search": {
+    "description": "核心配置",
+    "type": "object",
+    "hint": "可自定义站点地址、返回结果数、超时时间",
+    "items": {
+      "base_url": {
+        "description": "填写磁力狗站点地址",
+        "type": "string",
+        "hint": "若链接失效，请访问 https://ciligoufabuye3.xyz 或发邮件至 clgdzzh@gmail.com 更新地址",
+        "default": "https://clg2.clgapp1.xyz"
+      },
+      "search_path": {
+        "description": "搜索接口路径",
+        "type": "string",
+        "hint": "正常情况下无需修改。需以/开头，匹配站点实际接口",
+        "default": "/cllj.php"
+      },
+      "max_results": {
+        "description": "单次搜索返回的最大结果数",
+        "type": "int",
+        "hint": "建议设置 3-5（详情页解密需耗时）",
+        "default": 3
+      },
+      "request_timeout": {
+        "description": "HTTP 请求超时时间（单位：秒）",
+        "type": "int",
+        "hint": "详情页解密需耗时，建议设置 15-20",
+        "default": 15
+      }
+    }
+  }
+}
