@@ -177,9 +177,9 @@ class MagnetSearchService:
                     # 构造结果
                     results.append(
                         f"标题：{link['title']}\n"
-                        f"磁力链接：{magnet_link or '未提取到'}\n"
                         f"文件大小：{link['size']}\n"
-                        f"收录时间：{link['create_time']}"
+                        f"收录时间：{link['create_time']}\n"
+                        f"磁力链接：{magnet_link or '未提取到'}"
                     )
                 except Exception as e:
                     results.append(f"标题：{link['title']}\n解析失败：{str(e)[:30]}\n文件大小：{link['size']}")
@@ -325,8 +325,11 @@ class MagnetSearchPlugin(Star):
             end = start + page_size
             page_results = results[start:end]
             chain.append(Comp.Plain(f"共找到 {len(results)} 条有效结果，当前第 {page}/{total_pages} 页："))
+            yield event.chain_result(chain)
             for idx, res in enumerate(page_results, start + 1):
-                chain.append(Comp.Plain(f"‎\n===== 结果 {idx} =====\n‎{res}"))
+                result_chain = [Comp.Plain(f"===== 结果 {idx} =====\n{res}")]
+                yield event.chain_result(result_chain)
+            return
     
         # 返回完整的消息链
         yield event.chain_result(chain)
