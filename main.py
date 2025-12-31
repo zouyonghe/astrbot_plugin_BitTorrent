@@ -8,7 +8,7 @@ import httpx
 from bs4 import BeautifulSoup
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api import logger
+from astrbot.api import logger, AstrBotConfig
 import astrbot.api.message_components as Comp
 
 # ========== 1. 配置映射类（从配置文件读取参数） ==========
@@ -202,29 +202,53 @@ class MagnetSearchService:
     "https://github.com/NightDust981989/astrbot_plugin_BitTorrent"
 )
 class MagnetSearchPlugin(Star):
-    def __init__(self, context: Context, **kwargs):
+    def __init__(self, context: Context, config: AstrBotConfig, **kwargs):
         super().__init__(context)
         # ========== 从插件配置文件读取参数 ==========
-        # 获取magnet_search配置节点
-        plugin_config = context.get_config("magnet_search")
-        
-        # 读取配置参数（默认值兜底）
+        self._config_store = config
+        self.search_config = self._build_config()
+        self.search_service = MagnetSearchService(self.search_config)
+        logger.info(
+            f"磁力搜索插件初始化完成，使用站点：{self.search_config.base_url}{self.search_config.search_path}"
+        )
+
+    @staticmethod
+    def _coerce_int(value, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _get_plugin_config(self) -> Dict:
+        plugin_config = None
+        try:
+            plugin_config = self._config_store.get("magnet_search", None)
+        except Exception:
+            plugin_config = None
+        if isinstance(plugin_config, dict):
+            return plugin_config
+        if hasattr(self._config_store, "get"):
+            return self._config_store
+        return {}
+
+    def _build_config(self) -> MagnetConfig:
+        plugin_config = self._get_plugin_config()
         base_url = plugin_config.get("base_url", "https://clg2.clgapp1.xyz")
         search_path = plugin_config.get("search_path", "/cllj.php")
-        max_results = plugin_config.get("max_results", 20)
-        page_size = plugin_config.get("page_size", 5)
-        request_timeout = plugin_config.get("request_timeout", 15)
-
-        # 初始化配置类
-        self.config = MagnetConfig(
+        max_results = self._coerce_int(plugin_config.get("max_results", 20), 20)
+        page_size = self._coerce_int(plugin_config.get("page_size", 5), 5)
+        request_timeout = self._coerce_int(plugin_config.get("request_timeout", 15), 15)
+        return MagnetConfig(
             base_url=base_url,
             search_path=search_path,
             max_results=max_results,
             page_size=page_size,
             request_timeout=request_timeout
         )
-        self.search_service = MagnetSearchService(self.config)
-        logger.info(f"磁力搜索插件初始化完成，使用站点：{base_url}{search_path}")
+
+    def _refresh_config(self) -> None:
+        self.search_config = self._build_config()
+        self.search_service = MagnetSearchService(self.search_config)
 
     @filter.command("bt")
     async def magnet_search_handler(self, event: AstrMessageEvent):
@@ -235,6 +259,8 @@ class MagnetSearchPlugin(Star):
         """
         message = event.message_str.strip()
         args = message.split()
+
+        self._refresh_config()
     
         # 初始化消息链
         chain = []
@@ -284,7 +310,11 @@ class MagnetSearchPlugin(Star):
             chain.append(Comp.Plain("未找到相关磁力链接"))
         else:
             # 有结果时拼接完整内容
-            page_size = self.config.page_size if self.config.page_size and self.config.page_size > 0 else len(results)
+            page_size = (
+                self.search_config.page_size
+                if self.search_config.page_size and self.search_config.page_size > 0
+                else len(results)
+            )
             total_pages = (len(results) + page_size - 1) // page_size
             if page > total_pages:
                 chain.append(Comp.Plain(f"页码超出范围，当前共有 {total_pages} 页"))
