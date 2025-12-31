@@ -19,8 +19,14 @@
       "max_results": {
         "description": "单次搜索返回的最大结果数",
         "type": "int",
-        "hint": "建议设置 3-5（详情页解密需耗时）",
-        "default": 3
+        "hint": "建议设置 10-20（详情页解密需耗时）",
+        "default": 20
+      },
+      "page_size": {
+        "description": "单页展示的结果数",
+        "type": "int",
+        "hint": "建议设置 5-10",
+        "default": 5
       },
       "request_timeout": {
         "description": "HTTP 请求超时时间（单位：秒）",

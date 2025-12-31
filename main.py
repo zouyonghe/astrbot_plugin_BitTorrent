@@ -18,6 +18,7 @@ class MagnetConfig:
     base_url: str          # 站点基础地址
     search_path: str       # 搜索接口路径
     max_results: int       # 最大返回结果数
+    page_size: int         # 单页展示数量
     request_timeout: int   # 请求超时时间（秒）
     captcha_cookies: Dict[str, str] = None  # 验证Cookie（固定值）
 
@@ -210,7 +211,8 @@ class MagnetSearchPlugin(Star):
         # 读取配置参数（默认值兜底）
         base_url = plugin_config.get("base_url", "https://clg2.clgapp1.xyz")
         search_path = plugin_config.get("search_path", "/cllj.php")
-        max_results = plugin_config.get("max_results", 3)
+        max_results = plugin_config.get("max_results", 20)
+        page_size = plugin_config.get("page_size", 5)
         request_timeout = plugin_config.get("request_timeout", 15)
 
         # 初始化配置类
@@ -218,6 +220,7 @@ class MagnetSearchPlugin(Star):
             base_url=base_url,
             search_path=search_path,
             max_results=max_results,
+            page_size=page_size,
             request_timeout=request_timeout
         )
         self.search_service = MagnetSearchService(self.config)
@@ -238,11 +241,42 @@ class MagnetSearchPlugin(Star):
     
         if len(args) < 2 or args[0] != "bt":
             # 提示整合到chain
-            chain.append(Comp.Plain("用法：bt [关键词]\n示例：bt 安达与岛村"))
+            chain.append(Comp.Plain("用法：bt [关键词] [-p 页码]\n示例：bt 安达与岛村 -p 2"))
             yield event.chain_result(chain)
             return
-    
-        keyword = " ".join(args[1:])
+
+        page = 1
+        args_after_cmd = args[1:]
+        if "-p" in args_after_cmd:
+            p_idx = args_after_cmd.index("-p")
+            if p_idx + 1 >= len(args_after_cmd) or not args_after_cmd[p_idx + 1].isdigit():
+                chain.append(Comp.Plain("页码参数无效，请使用：bt [关键词] -p [页码]"))
+                yield event.chain_result(chain)
+                return
+            page = int(args_after_cmd[p_idx + 1])
+            keyword_parts = args_after_cmd[:p_idx] + args_after_cmd[p_idx + 2:]
+        elif "--page" in args_after_cmd:
+            p_idx = args_after_cmd.index("--page")
+            if p_idx + 1 >= len(args_after_cmd) or not args_after_cmd[p_idx + 1].isdigit():
+                chain.append(Comp.Plain("页码参数无效，请使用：bt [关键词] --page [页码]"))
+                yield event.chain_result(chain)
+                return
+            page = int(args_after_cmd[p_idx + 1])
+            keyword_parts = args_after_cmd[:p_idx] + args_after_cmd[p_idx + 2:]
+        else:
+            keyword_parts = args_after_cmd
+
+        if page < 1:
+            chain.append(Comp.Plain("页码需为大于等于 1 的整数"))
+            yield event.chain_result(chain)
+            return
+
+        if not keyword_parts:
+            chain.append(Comp.Plain("用法：bt [关键词] [-p 页码]\n示例：bt 安达与岛村 -p 2"))
+            yield event.chain_result(chain)
+            return
+
+        keyword = " ".join(keyword_parts)
         results = await self.search_service.search(keyword)
     
         if not results:
@@ -250,8 +284,18 @@ class MagnetSearchPlugin(Star):
             chain.append(Comp.Plain("未找到相关磁力链接"))
         else:
             # 有结果时拼接完整内容
-            chain.append(Comp.Plain(f"共找到 {len(results)} 条有效结果："))
-            for idx, res in enumerate(results, 1):
+            page_size = self.config.page_size if self.config.page_size and self.config.page_size > 0 else len(results)
+            total_pages = (len(results) + page_size - 1) // page_size
+            if page > total_pages:
+                chain.append(Comp.Plain(f"页码超出范围，当前共有 {total_pages} 页"))
+                yield event.chain_result(chain)
+                return
+
+            start = (page - 1) * page_size
+            end = start + page_size
+            page_results = results[start:end]
+            chain.append(Comp.Plain(f"共找到 {len(results)} 条有效结果，当前第 {page}/{total_pages} 页："))
+            for idx, res in enumerate(page_results, start + 1):
                 chain.append(Comp.Plain(f"‎\n===== 结果 {idx} =====\n‎{res}"))
     
         # 返回完整的消息链
