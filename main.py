@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger, AstrBotConfig
+from astrbot.api.message_components import Plain, Node, Nodes
 import astrbot.api.message_components as Comp
 
 # ========== 1. 配置映射类（从配置文件读取参数） ==========
@@ -324,11 +325,24 @@ class MagnetSearchPlugin(Star):
             start = (page - 1) * page_size
             end = start + page_size
             page_results = results[start:end]
-            chain.append(Comp.Plain(f"共找到 {len(results)} 条有效结果，当前第 {page}/{total_pages} 页："))
-            yield event.chain_result(chain)
+            nodes = Nodes([])
+            summary_text = f"共找到 {len(results)} 条有效结果，当前第 {page}/{total_pages} 页："
+            nodes.nodes.append(
+                Node(
+                    uin=event.get_self_id(),
+                    name="磁力搜索",
+                    content=[Plain(summary_text)],
+                )
+            )
             for idx, res in enumerate(page_results, start + 1):
-                result_chain = [Comp.Plain(f"===== 结果 {idx} =====\n{res}")]
-                yield event.chain_result(result_chain)
+                nodes.nodes.append(
+                    Node(
+                        uin=event.get_self_id(),
+                        name="磁力搜索",
+                        content=[Plain(f"===== 结果 {idx} =====\n{res}")],
+                    )
+                )
+            yield event.chain_result([nodes])
             return
     
         # 返回完整的消息链
